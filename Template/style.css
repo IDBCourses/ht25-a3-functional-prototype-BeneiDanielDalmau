@@ -36,7 +36,7 @@
     background-color: deeppink;
     position: absolute;
     border-radius: 50%;
-    transform-origin: 50% 50%;
+    
 }
 .obstacle2 {
     width: 100px;
@@ -44,7 +44,23 @@
     background-color: deeppink;
     position: absolute;
     border-radius: 50%;
-    transform-origin: 50% 50%;
+    
+}
+.won {
+    width: 100px;
+    height: 100px;
+    background-color: deeppink;
+    position: absolute;
+    border-radius: 50%;
+    
+}
+.lost {
+    width: 100px;
+    height: 100px;
+    background-color: deeppink;
+    position: absolute;
+    border-radius: 50%;
+    
 }
 /* Prevent padding and border from affecting element width. */
 *,

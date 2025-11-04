@@ -7,6 +7,36 @@ import * as Util from "./util.js";
 
 //--------------STATE VARIABLES----------------------------------------
 // State variables are the parts of your program that change over time.
+let finishObj = {
+  rou: 0,
+  h: 120,
+  x: window.innerWidth-100,
+  y: window.innerHeight-300,
+  width: 100,
+  height: 100,
+  div: finish,
+}
+
+let obstacle1Obj = {
+  rou: 0,
+  h: 0,
+  x: window.innerWidth/3,
+  y: 0,
+  width: 100,
+  height: 600,
+  div: obstacle1,
+}
+
+let obstacle2Obj = {
+  rou: 0,
+  h: 0,
+  x: window.innerWidth/3*2,
+  y: window.innerHeight-600,
+  width: 100,
+  height: 600,
+  div: obstacle2,
+}
+
 let worm = {
   headObj: {
     x:0,
@@ -42,6 +72,22 @@ const growthSpeed = 2;
 
 //---------------FUNCTIONS--------------
 //see all function definitions just below
+
+function wormCollidesWith(obstacle){
+  let collisionX = undefined;
+  let collisionY = undefined;
+  if (worm.headObj.x>obstacle.x && worm.headObj.x <obstacle.x+obstacle.width){
+    collisionX = true;
+  }
+  if (worm.headObj.y>obstacle.y && worm.headObj.y <obstacle.y+obstacle.height){
+    collisionY = true;
+  }
+  if (collisionX && collisionY){
+    return(true);
+  }else{
+    return(false);
+  }
+}
 
 function keepWormTogether(){
 
@@ -140,16 +186,23 @@ function loop() {
   wormMovement()
   Util.setSize(25+worm.bodyObj.len,100,body);
   keepWormTogether();
-  console.log("len "+worm.bodyObj.len,"distance "+distance)
-//---------------TEST-----
+  console.log("len "+worm.bodyObj.len,"distance "+distance);
+
+  if (wormCollidesWith(finishObj)){
+    Util.setColour(120,100,50,1,won);//setting the whole screen green
+  }else if (wormCollidesWith(obstacle1Obj)||wormCollidesWith(obstacle2Obj)){
+    Util.setColour(0,100,50,1,lost);//setting the whole screen red
+  }
 
   window.requestAnimationFrame(loop);   
 }
 //---------------SETUP----------------------------------------------------------
 // Setup is run once, at the start of the program. It sets everything up for us!
 function setup() {
-//make body square, end and head are round by default
+//Roundedness
   Util.setRoundedness(0,body);
+  Util.setRoundedness(0,won);
+  Util.setRoundedness(0,lost);
 //Position
   Util.setPositionPixels(100,500,head)
   Util.setPositionPixels(100,500,head);
@@ -161,10 +214,21 @@ function setup() {
   Util.setPositionPixels(100-50,500,end);
   worm.endObj.x = 100-50;
   worm.endObj.y = 500;
+
+//Size
+  Util.setSize(10000,10000,won);
+  Util.setSize(10000,10000,lost);
 //Color
   Util.setColour(0,100,85,1,head);
+  Util.setColour(120,100,50,0,won);
+  Util.setColour(0,100,50,0,lost);
 
-
+  for (let obj of [finishObj,obstacle1Obj,obstacle2Obj]){
+    Util.setRoundedness(obj.rou,obj.div);
+    Util.setColour(obj.h,100,60,1,obj.div);
+    Util.setPositionPixels(obj.x,obj.y,obj.div);
+    Util.setSize(obj.width,obj.height,obj.div);
+  }
 
 // Put your event listener code here
 // we add event.code to keysPressed array
