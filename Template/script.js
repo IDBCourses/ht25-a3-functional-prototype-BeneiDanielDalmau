@@ -8,17 +8,17 @@ import * as Util from "./util.js";
 //--------------STATE VARIABLES----------------------------------------
 // State variables are the parts of your program that change over time.
 let worm = {
-  head: {
+  headObj: {
     x:0,
     y:0,
   },
-  body: {
+  bodyObj: {
     x:0,
     y:0,
-    deg: 0,
+    deg:0,
     len:0,
   },
-  end: {
+  endObj: {
     x:0,
     y:0,
   }
@@ -31,101 +31,104 @@ const allKeys =   ["Digit1","Digit2","Digit3","Digit4","Digit5","Digit6","Digit7
                    "KeyQ"  ,"KeyW"  ,"KeyE"  ,"KeyR"  ,"KeyT"  ,"KeyY"  ,"KeyU"  ,"KeyI"  ,"KeyO"  ,"KeyP"     ,
                    "KeyA"  ,"KeyS"  ,"KeyD"  ,"KeyF"  ,"KeyG"  ,"KeyH"  ,"KeyJ"  ,"KeyK"  ,"KeyL"  ,"Semicolon",
                    "KeyZ"  ,"KeyX"  ,"KeyC"  ,"KeyV"  ,"KeyB"  ,"KeyN"  ,"KeyM"  ,"Comma" ,"Period","Slash"    ]
-
-//stores hue
-let h = 0;
-let lengthTarget = 0;
-let lastDeleted = null;
-let lastDeletedIndex = null;
+let distance = undefined;
+let fwdShrinkX = undefined;
+let fwdShrinkY = undefined;
+let neighbours = false;
+let lastDeletedIndex = undefined;
 //--------------SETTINGS------------------------------------------------------
 // Settings variables should contain all of the "fixed" parts of your programs
-
+const growthSpeed = 2;
 
 //---------------FUNCTIONS--------------
 //see all function definitions just below
 
-//simple function to highlight our html element by changing its color anytime at least 1 key is down
-function highlight(){
- if (keysPressed.length >=1){
-  h = 240;
- } else {
-  h = 0;
- }
- return (h);
-}
-
 function keepWormTogether(){
-// we should read rotation value,
-//then set head position based on that and the body lenght,
-worm.head.x = worm.body.x+Math.cos(rad(worm.body.deg))*(worm.body.len)
-worm.head.y = worm.body.y+Math.sin(rad(worm.body.deg))*(worm.body.len)
-Util.setRotation(worm.body.deg, head)
-Util.setPositionPixels(worm.head.x,worm.head.y,head)
-console.log("head x "+worm.head.x,"head y "+worm.head.y, "worm body", worm.body, "head", head)
+
+const {headObj,bodyObj,endObj} = worm
+
+headObj.x = bodyObj.x+Math.cos(rad(bodyObj.deg))*(bodyObj.len-25)
+headObj.y = bodyObj.y+Math.sin(rad(bodyObj.deg))*(bodyObj.len-25)
+endObj.x = bodyObj.x-Math.cos(rad(bodyObj.deg))*(50)
+endObj.y = bodyObj.y-Math.sin(rad(bodyObj.deg))*(50)
+Util.setRotation(bodyObj.deg, head)
+Util.setRotation(bodyObj.deg, end)
+Util.setPositionPixels(headObj.x,headObj.y,head)
+Util.setPositionPixels(endObj.x,endObj.y,end)
 }
 
 function shrinkForward(){
+const {headObj,bodyObj} = worm
+  //calculating the body's distance from head
+  let xDiff = fwdShrinkX-bodyObj.x;
+  let yDiff = fwdShrinkY-bodyObj.y;
+  distance = Math.sqrt(xDiff*xDiff+yDiff*yDiff);
   
-}
+  if(distance>=0&&bodyObj.len>=growthSpeed){
+    //shrinking
+    bodyObj.len -=growthSpeed;
 
-function shrinkBack(){
-  worm.body.len-=10;
-}
+    //keeping head at initial position
+    headObj.x=fwdShrinkX;
+    headObj.y=fwdShrinkY;
 
-function wormBehaviour(){
-  //rotation
-  function rotateWorm(){
-    if (keysPressed.length ===2){
-   Util.setRotation(checkIfNeighbours(keysPressed[0],keysPressed[1]),body)
-    }
+    //coordinates for moving the body at the same rate at it shrinks, so it appears to shrink towards the head
+    bodyObj.x = headObj.x-Math.cos(rad(bodyObj.deg))*(bodyObj.len-25)
+    bodyObj.y = headObj.y-Math.sin(rad(bodyObj.deg))*(bodyObj.len-25)
+
+    //moving the body and the end, while maintining their relative position
+    Util.setPositionPixels(bodyObj.x,bodyObj.y,body)
+    Util.setPositionPixels(bodyObj.x,bodyObj.y,end)
   }
-  rotateWorm()
-  //growth
-  if (relationStatus === !"not neighbours"&&keysPressed.length ===2){ +
-    function grow(){
-      Util.setSize(50+worm.body.len,100,body);//grow should happen w Util.setSize
-    }
-  //shrinking
+  return(distance)
+}
+
+
+function wormMovement(){
+  if (neighbours&&keysPressed.length ===2){
+    worm.bodyObj.len+=growthSpeed;//grow
   }else if (lastDeletedIndex === 0 && keysPressed.length ===1){ 
-    shrinkForward()
-  }else if(lastDeletedIndex === 1 && keysPressed.length ===1){ 
-    shrinkBack()
-  }
+    shrinkForward();
+  }else if(lastDeletedIndex === 1 && keysPressed.length ===1 && worm.bodyObj.len>0){ 
+    worm.bodyObj.len-=growthSpeed;//shrinkBack
+  }else if (keysPressed.length === 0 && worm.bodyObj.len>0)
+    worm.bodyObj.len-=growthSpeed;
+  return(worm.bodyObj.len)
 }
 
-/*checkIfNeighbours - ckecks if key1 is a neighbour to key2 and outputs text describing the result,
+/*calRelPos - ckecks if key1 is a neighbour to key2 and outputs text describing the result,
   there are 6 possible "neighbour positions" based on a hexagonal grid*/
-function checkIfNeighbours (key1,key2) { 
+function calcRelPos (key1,key2) { 
   function keyRow (key){
     return (allKeys.indexOf(key) - allKeys.indexOf(key)%10)
   }
   let sameRow = keyRow (key1) === keyRow (key2);
   let indexDiff = allKeys.indexOf(key1)-allKeys.indexOf(key2);
-  let relationStatus = "default";
- if (indexDiff === 10){
-  relationStatus = "top left neighbour, angle -30";
-  worm.body.deg = -120;
- } else if (indexDiff === 9){
-  relationStatus = "top right neighbour, angle +30"
-  worm.body.deg = -60;
- } else if (indexDiff === -9){
-  relationStatus = "bottom left neighbour, angle -150"
-  worm.body.deg = -240;
- } else if (indexDiff === -10){
-  relationStatus = "bottom right neighbour, angle +150 "
-  worm.body.deg = 60;
- } else if (sameRow && indexDiff === 1){
-  relationStatus = "left neighbour, angle - 90"
-  worm.body.deg = -180;
- } else if (sameRow && indexDiff ===-1){
-  relationStatus = "right neighbour, angle + 90"
-  worm.body.deg = 0;
- } else {
-  relationStatus = "not neighbours"
- }
- return(worm.body.deg);
-}
 
+ if (indexDiff === 10){
+  neighbours = true;
+  worm.bodyObj.deg = -120;//top left neighbour, angle -30
+ } else if (indexDiff === 9){
+  neighbours = true;
+  worm.bodyObj.deg = -60;//top right neighbour, angle +30
+ } else if (indexDiff === -9){
+  neighbours = true;
+  worm.bodyObj.deg = -240;//bottom left neighbour, angle -150
+ } else if (indexDiff === -10){
+  neighbours = true;
+  worm.bodyObj.deg = 60;//bottom right neighbour, angle +150
+ } else if (sameRow && indexDiff === 1){
+  neighbours = true;
+  worm.bodyObj.deg = -180;//left neighbour, angle - 90
+ } else if (sameRow && indexDiff ===-1){
+  neighbours = true;
+  worm.bodyObj.deg = 0;//right neighbour, angle + 90
+ } else {
+  neighbours = false;
+ }
+ return(worm.bodyObj.deg);
+}
+//function to convert from deg to rad
 function rad(deg){
 return (deg*Math.PI/180)
 }
@@ -133,12 +136,11 @@ return (deg*Math.PI/180)
 //---------------LOOP----------------
 // Code that runs over and over again
 function loop() {
-  console.log(keysPressed);
-  highlight();
-  Util.setRotation(checkIfNeighbours(keysPressed[0],keysPressed[1]),body);
-  Util.setSize(50+worm.body.len,100,body);
-  Util.setColour(h,100,85,1,head);
+  Util.setRotation(calcRelPos(keysPressed[0],keysPressed[1]),body);
+  wormMovement()
+  Util.setSize(25+worm.bodyObj.len,100,body);
   keepWormTogether();
+  console.log("len "+worm.bodyObj.len,"distance "+distance)
 //---------------TEST-----
 
   window.requestAnimationFrame(loop);   
@@ -146,33 +148,39 @@ function loop() {
 //---------------SETUP----------------------------------------------------------
 // Setup is run once, at the start of the program. It sets everything up for us!
 function setup() {
+//make body square, end and head are round by default
+  Util.setRoundedness(0,body);
+//Position
+  Util.setPositionPixels(100,500,head)
+  Util.setPositionPixels(100,500,head);
+  worm.headObj.x = 100;
+  worm.headObj.y = 500;
+  Util.setPositionPixels(100,500,body);
+  worm.bodyObj.x = 100;
+  worm.bodyObj.y = 500;
+  Util.setPositionPixels(100-50,500,end);
+  worm.endObj.x = 100-50;
+  worm.endObj.y = 500;
+//Color
+  Util.setColour(0,100,85,1,head);
 
-  Util.setRoundedness(0,body);//make body square, end and head are round by default
-  Util.setSize(100,100,head);
-  Util.setSize(100,100,body);
-  Util.setSize(100,100,end);
-  Util.setPositionPixels(500,500,head);
-  worm.head.x = 500;
-  worm.head.y = 500;
-  Util.setPositionPixels(500,500,body);
-  worm.body.x = 500;
-  worm.body.y = 500;
-  Util.setPositionPixels(500-50,500,end);
-  worm.end.x = 500-50;
-  worm.end.y = 500;
+
+
 // Put your event listener code here
 // we add event.code to keysPressed array
  document.addEventListener("keydown", (event)=>{
   if (!event.repeat){
   keysPressed.push(event.code)
-  }else if(event.repeat){//
-    worm.body.len+=10;
   }
  })
  // we remove event.code from keysPressed array
  document.addEventListener("keyup", (event)=>{
-  lastDeleted = keysPressed.splice(keysPressed.indexOf(event.code),1);// store the event.code of the last deleted element from keysPressed array 
-  lastDeletedIndex = keysPressed.indexOf(event.code) // store the index of the last deleted element from keysPressed array
+  lastDeletedIndex = keysPressed.indexOf(event.code)
+  keysPressed.splice(keysPressed.indexOf(event.code),1);
+  if(keysPressed.length===1&&lastDeletedIndex===0){
+    fwdShrinkX = worm.headObj.x;
+    fwdShrinkY = worm.headObj.y;
+  }
  })
   window.requestAnimationFrame(loop);
 }
